@@ -6,7 +6,7 @@ class User(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, nullable=False)
-    username = str = Field(unique=True, nullable=False)
-    avatar: Optional[str] = None
-    bio: Optional[str] = None
+    username: str = Field(unique=True, nullable=False)
+    avatar: Optional[str] = Field(default=None)
+    bio: Optional[str] = Field(default=None)
     password: str = Field(nullable=False)
