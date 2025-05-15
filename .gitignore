@@ -36,3 +36,5 @@ logs/
 # Arquivos do sistema operacional
 .DS_Store
 Thumbs.db
+
+.secrets.toml

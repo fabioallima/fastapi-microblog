@@ -1,0 +1,7 @@
+[default]
+
+[default.db]
+uri = ""
+connect_args = {check_same_thread=false}
+echo = true
+
