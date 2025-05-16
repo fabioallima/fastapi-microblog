@@ -14,7 +14,7 @@ bcrypt==4.3.0
     # via passlib
 cffi==1.17.1
     # via cryptography
-click==8.2.0
+click==8.1.7
     # via
     #   typer
     #   uvicorn
@@ -88,7 +88,7 @@ sqlmodel==0.0.24
     # via -r .\requirements.in
 starlette==0.46.2
     # via fastapi
-typer==0.15.3
+typer==0.9.0
     # via -r .\requirements.in
 typing-extensions==4.13.2
     # via
