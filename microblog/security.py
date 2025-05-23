@@ -1,5 +1,6 @@
 """Security utilities"""
 from passlib.context import CryptContext
+from pydantic_core import core_schema
 
 from microblog.config import settings
 
@@ -29,21 +30,11 @@ class HashedPassword(str):
     """
 
     @classmethod
-    def __get_validators__(cls):
-        # one or more validators may be yielded which will be called in the
-        # order to validate the input, each validator will receive as an input
-        # the value returned from the previous validator
-        yield cls.validate
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        return core_schema.str_schema()
 
-    @classmethod
-    def validate(cls, v):
-        """Accepts a plain text password and returns a hashed password."""
-        if not isinstance(v, str):
+    def __new__(cls, value: str):
+        if not isinstance(value, str):
             raise TypeError("string required")
-
-        hashed_password = get_password_hash(v)
-        # you could also return a string here which would mean model.password
-        # would be a string, pydantic won't care but you could end up with some
-        # confusion since the value's type won't match the type annotation
-        # exactly
-        return cls(hashed_password)
+        hashed_password = get_password_hash(value)
+        return super().__new__(cls, hashed_password)

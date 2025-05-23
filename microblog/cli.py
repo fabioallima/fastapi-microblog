@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from .config import settings
 from .db import engine
 from .models import User
+from .security import HashedPassword
 
 main = typer.Typer(name="Microblog CLI")
 
@@ -48,3 +49,18 @@ def user_list():
 
     Console().print(table)
 
+
+@main.command()
+def create_user(email: str, username: str, password: str):
+    """Create user"""
+    with Session(engine) as session:
+        user = User(
+            email=email,
+            username=username,
+            password=HashedPassword(password)
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        typer.echo(f"created {username} user")
+        return user

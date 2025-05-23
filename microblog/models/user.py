@@ -4,10 +4,12 @@ from microblog.security import HashedPassword
 
 class User(SQLModel, table=True):
     """Represents the User Model"""
+    
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, nullable=False)
     username: str = Field(unique=True, nullable=False)
     avatar: Optional[str] = Field(default=None)
     bio: Optional[str] = Field(default=None)
-    password: str = HashedPassword
+    password: HashedPassword
