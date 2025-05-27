@@ -1,7 +1,10 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import Optional, List, TYPE_CHECKING
+from sqlmodel import Field, SQLModel, Relationship
 from microblog.security import HashedPassword
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from microblog.models.post import Post
 
 class User(SQLModel, table=True):
     """Represents the User Model"""
@@ -14,6 +17,8 @@ class User(SQLModel, table=True):
     avatar: Optional[str] = Field(default=None)
     bio: Optional[str] = Field(default=None)
     password: HashedPassword
+
+    posts: List["Post"] = Relationship(back_populates="user")
 
 
 class UserResponse(BaseModel):

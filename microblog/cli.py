@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from .config import settings
 from .db import engine
-from .models import User
+from .models import User, Post
 from .security import HashedPassword
 
 main = typer.Typer(name="Microblog CLI")
@@ -20,6 +20,7 @@ def shell():
         "select": select,
         "session": Session(engine),
         "User": User,
+        "Post": Post,
     }
     typer.echo(f"Auto imports: {list(_vars.keys())}")
     try:
