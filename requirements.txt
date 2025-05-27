@@ -10,7 +10,7 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
     # via starlette
-bcrypt==4.3.0
+bcrypt==4.0.1
     # via passlib
 cffi==1.17.1
     # via cryptography

@@ -1,8 +1,7 @@
 from typing import List
-
-from fastapi import APIRouter
-from fastapi.exceptions import HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, select
+from sqlalchemy import Select
 
 from microblog.auth import AuthenticatedUser
 from microblog.db import ActiveSession
@@ -20,8 +19,8 @@ router = APIRouter()
 @router.get("/", response_model=List[PostResponse])
 async def list_posts(*, session: Session = ActiveSession):
     """List all posts without replies"""
-    query = select(Post).where(Post.parent == None)
-    posts = session.scalar(query).all()
+    query: Select[Post] = select(Post).where(Post.parent == None)
+    posts = session.exec(query).all()
     return posts
 
 
@@ -32,8 +31,8 @@ async def get_post_by_post_id(
     post_id: int,
 ):
     """Get post by post_id"""
-    query = select(Post).where(Post.id == post_id)
-    post = session.scalar(query).first()
+    query: Select[Post] = select(Post).where(Post.id == post_id)
+    post = session.exec(query).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
@@ -50,8 +49,8 @@ async def get_posts_by_username(
     filters = [User.username == username]
     if not include_replies:
         filters.append(Post.parent == None)
-    query = select(Post).join(User).where(*filters)
-    posts = session.scalar(query).all()
+    query: Select[Post] = select(Post).join(User).where(*filters)
+    posts = session.exec(query).all()
     return posts
 
 
@@ -63,10 +62,12 @@ async def create_post(
     post: PostRequest,
 ):
     """Creates new post"""
-
-    post.user_id = user.id
-
-    db_post = Post.from_orm(post)  # transform PostRequest in Post
+    db_post = Post.model_validate({
+        "text": post.text,
+        "user_id": user.id,
+        "parent_id": post.parent_id
+    })
+    
     session.add(db_post)
     session.commit()
     session.refresh(db_post)

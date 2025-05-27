@@ -1,8 +1,7 @@
-
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -14,7 +13,10 @@ class Post(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     text: str
-    date: datetime = Field(default_factory=datetime.now(timezone.utc), nullable=False)
+    date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
 
     user_id: Optional[int] = Field(foreign_key="user.id")
     parent_id: Optional[int] = Field(foreign_key="post.id")
@@ -44,20 +46,26 @@ class PostResponse(BaseModel):
     user_id: int
     parent_id: Optional[int]
 
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class PostResponseWithReplies(PostResponse):
     replies: Optional[list["PostResponse"]] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 
 class PostRequest(BaseModel):
     """Serializer for Post request payload"""
 
-    parent_id: Optional[int]
+    parent_id: Optional[int] = None
     text: str
 
-    class Config:
-        extra = Extra.allow
-        arbitrary_types_allowed = True
+    model_config = {
+        "from_attributes": True,
+        "extra": "allow"
+    }
