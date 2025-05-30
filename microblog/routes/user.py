@@ -1,131 +1,107 @@
 from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from beanie import PydanticObjectId
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-
-from microblog.db import ActiveSession
-from microblog.models.user import User, UserRequest, UserResponse
+from microblog.models.user import User, UserCreate, UserUpdate, UserResponse
 from microblog.models.social import Social
-from microblog.models.post import Post, TimelineResponse
-from microblog.security import HashedPassword
-from microblog.auth import get_current_user
+from microblog.models.post import TimelineResponse, Post, PostResponse
+from microblog.security import get_current_user, get_password_hash
+from microblog.auth import AuthenticatedUser
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["users"])
+
 
 @router.get("/", response_model=List[UserResponse])
-async def list_users(*, session: Session = ActiveSession):
-    """List all users"""
-    users = session.exec(select(User)).all()
-    return users
+async def list_users():
+    return await User.find_all().to_list()
+
 
 @router.get("/{username}/", response_model=UserResponse)
-async def get_user_by_username(
-        *, session: Session = ActiveSession, username: str
-):
-    """Get user by username"""
-    query = select(User).where(User.username == username)
-    user = session.exec(query).first()
+async def get_user_by_username(username: str):
+    user = await User.find_one(User.username == username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    return UserResponse(
-        id=user.id,
+    return user
+
+
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(user: UserCreate):
+    """Create a new user"""
+    if await User.find_one({"username": user.username}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered",
+        )
+    if await User.find_one({"email": user.email}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    db_user = User(
         username=user.username,
         email=user.email,
-        avatar=user.avatar,
-        bio=user.bio
+        password_hash=get_password_hash(user.password),
+        bio=user.bio,
     )
-
-@router.post("/", response_model=UserResponse, status_code=201)
-async def create_user(*, session: Session = ActiveSession, user: UserRequest):
-    """Create new user"""
-    # Verifica se o usuário já existe
-    existing_user = session.exec(
-        select(User).where(
-            (User.email == user.email) | (User.username == user.username)
-        )
-    ).first()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Email or username already registered"
-        )
-    
-    # Cria o usuário com a senha criptografada
-    db_user = User.model_validate({
-        "email": user.email,
-        "username": user.username,
-        "password": HashedPassword(user.password),
-        "avatar": user.avatar,
-        "bio": user.bio
-    })
-    
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
+    await db_user.insert()
     return db_user
 
+
+@router.get("/id/{user_id}", response_model=UserResponse)
+async def read_user(user_id: str):
+    """Get a user by ID"""
+    user = await User.get(PydanticObjectId(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
+
+
+
 @router.post("/follow/{user_id}", status_code=201)
-async def follow_user(
-    *,
-    session: Session = ActiveSession,
-    user_id: int,
-    current_user: User = Depends(get_current_user)
-):
-    """Seguir um usuário"""
-    # Verifica se o usuário a ser seguido existe
-    user_to_follow = session.get(User, user_id)
+async def follow_user(user_id: str, current_user: User = Depends(get_current_user)):
+    if user_id == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+
+    user_to_follow = await User.get(PydanticObjectId(user_id))
     if not user_to_follow:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Verifica se não está tentando seguir a si mesmo
-    if user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot follow yourself")
-    
-    # Verifica se já não está seguindo
-    existing_follow = session.exec(
-        select(Social).where(
-            (Social.from_user_id == current_user.id) & 
-            (Social.to_user_id == user_id)
-        )
-    ).first()
-    
+
+    existing_follow = await Social.find_one(
+        Social.from_user_id == current_user.id,
+        Social.to_user_id == PydanticObjectId(user_id)
+    )
     if existing_follow:
         raise HTTPException(status_code=400, detail="Already following this user")
-    
-    # Cria o relacionamento de seguir
-    follow = Social(from_user_id=current_user.id, to_user_id=user_id)
-    session.add(follow)
-    session.commit()
-    
+
+    follow = Social(from_user_id=current_user.id, to_user_id=PydanticObjectId(user_id))
+    await follow.insert()
     return {"message": f"Now following user {user_to_follow.username}"}
 
+
 @router.get("/timeline", response_model=List[TimelineResponse])
-async def get_timeline(
-    *,
-    session: Session = ActiveSession,
-    current_user: User = Depends(get_current_user)
-):
-    """Lista todos os posts dos usuários que o usuário atual segue"""
-    # Busca os IDs dos usuários que o usuário atual segue
-    following_ids = session.exec(
-        select(Social.to_user_id)
-        .where(Social.from_user_id == current_user.id)
-    ).all()
-    
-    if not following_ids:
+async def get_timeline(current_user: User = Depends(get_current_user)):
+    follows = await Social.find(Social.from_user_id == current_user.id).to_list()
+    followed_user_ids = [follow.to_user_id for follow in follows]
+
+    if not followed_user_ids:
         return []
-    
-    try:
-        posts = session.exec(
-            select(Post)
-            .where(Post.user_id.in_(following_ids))
-            .order_by(Post.date.desc())
-        ).all()
-        
-        # Convertendo os posts para TimelineResponse
-        return [TimelineResponse.model_validate(post) for post in posts]
-    except Exception as e:
-        print(f"Erro ao buscar posts: {e}")
-        return []
+
+    posts = await Post.find(Post.user.id.in_(followed_user_ids)).sort("-date").to_list()
+    return [TimelineResponse.model_validate(post) for post in posts]
+
+
+@router.get("/{user_id}/posts", response_model=List[PostResponse])
+async def read_user_posts(user_id: str):
+    """Get all posts from a user"""
+    user = await User.get(PydanticObjectId(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    posts = await Post.find({"user.id": user.id}).to_list()
+    return posts
