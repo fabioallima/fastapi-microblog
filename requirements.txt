@@ -103,3 +103,5 @@ typing-inspection==0.4.0
     # via pydantic
 uvicorn==0.34.2
     # via -r .\requirements.in
+motor==3.3.2
+beanie==1.25.0

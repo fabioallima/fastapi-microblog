@@ -8,8 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MICROBLOG_DB__uri: "postgresql://postgres:postgres@db:5432/${MICROBLOG_DB:-microblog}"
-      MICROBLOG_DB__connect_args: "{}"
+      - MICROBLOG_DB__uri=mongodb://mongodb:27017/microblog
     volumes:
       - .:/home/app/api
     depends_on:
@@ -17,14 +16,12 @@ services:
     stdin_open: true
     tty: true
   db:
-    build: postgres
-    image: microblog_postgres-13-alpine-multi-user
-    volumes:
-      - $HOME/.postgres/microblog_db/data/postgresql:/var/lib/postgresql/data
+    image: mongo:latest
     ports:
-      # ATENÇÃO: Mude para 5432: se precisar acessar via host
-      - "5435:5432"
-    environment:
-      - POSTGRES_DBS=microblog, microblog_test
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+        - "27017:27017"
+    volumes:
+        - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
+
