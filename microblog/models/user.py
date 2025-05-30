@@ -2,12 +2,14 @@ from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, Integer, DateTime, ForeignKey
+
 from microblog.security import HashedPassword
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from microblog.models.post import Post
     from microblog.models.social import Social
+    from microblog.models.like import Like
 
 class User(SQLModel, table=True):
     """Represents the User Model"""
@@ -38,6 +40,8 @@ class User(SQLModel, table=True):
             "primaryjoin": "User.id == Social.to_user_id"
         }
     )
+
+    likes: List["Like"] = Relationship(back_populates="user")
 
 
 class UserResponse(BaseModel):

@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel
-from .user import User
-from .post import Post
-from .social import Social
+from microblog.models.user import User
+from microblog.models.post import Post
+from microblog.models.social import Social
+from microblog.models.like import Like
 
-__all__ = ["SQLModel", "User", "Post", "Social"]
+__all__ = ["SQLModel", "User", "Post", "Social", "Like"]
