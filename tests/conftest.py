@@ -18,6 +18,7 @@ def clean_database():
     """Clean database between tests"""
     with Session(engine) as session:
         # Delete all data from tables
+        session.execute(text('DELETE FROM "like"'))
         session.execute(text('DELETE FROM "post"'))
         session.execute(text('DELETE FROM "social"'))
         session.execute(text('DELETE FROM "user"'))
