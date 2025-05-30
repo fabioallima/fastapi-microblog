@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from microblog.db import ActiveSession
 from microblog.models.user import User, UserRequest, UserResponse
 from microblog.models.social import Social
-from microblog.models.post import Post
+from microblog.models.post import Post, TimelineResponse
 from microblog.security import HashedPassword
 from microblog.auth import get_current_user
 
@@ -101,7 +101,7 @@ async def follow_user(
     
     return {"message": f"Now following user {user_to_follow.username}"}
 
-@router.get("/timeline", response_model=List[Post])
+@router.get("/timeline", response_model=List[TimelineResponse])
 async def get_timeline(
     *,
     session: Session = ActiveSession,
@@ -114,11 +114,18 @@ async def get_timeline(
         .where(Social.from_user_id == current_user.id)
     ).all()
     
-    # Busca os posts desses usuários
-    posts = session.exec(
-        select(Post)
-        .where(Post.user_id.in_(following_ids))
-        .order_by(Post.created_at.desc())
-    ).all()
+    if not following_ids:
+        return []
     
-    return posts
+    try:
+        posts = session.exec(
+            select(Post)
+            .where(Post.user_id.in_(following_ids))
+            .order_by(Post.date.desc())
+        ).all()
+        
+        # Convertendo os posts para TimelineResponse
+        return [TimelineResponse.model_validate(post) for post in posts]
+    except Exception as e:
+        print(f"Erro ao buscar posts: {e}")
+        return []

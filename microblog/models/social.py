@@ -2,6 +2,7 @@ from typing import Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from microblog.models.user import User
@@ -34,4 +35,19 @@ class Social(SQLModel, table=True):
             "foreign_keys": "[Social.to_user_id]",
             "primaryjoin": "User.id == Social.to_user_id"
         }
-    ) 
+    )
+
+
+class SocialResponse(BaseModel):
+    """Serializer for Social Response"""
+    
+    id: int
+    from_user_id: int
+    to_user_id: int
+    date: datetime
+
+    model_config = {
+        "from_attributes": True
+    } 
+
+

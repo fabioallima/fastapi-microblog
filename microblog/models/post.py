@@ -69,3 +69,17 @@ class PostRequest(BaseModel):
         "from_attributes": True,
         "extra": "allow"
     }
+
+
+class TimelineResponse(BaseModel):
+    """Serializer for Timeline Response"""
+    
+    id: int
+    text: str
+    date: datetime
+    user_id: int
+    parent_id: Optional[int]
+
+    model_config = {
+        "from_attributes": True
+    }
