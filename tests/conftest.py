@@ -2,12 +2,27 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
 
 from microblog.app import app
 from microblog.cli import create_user
+from microblog.db import engine
 
 os.environ["MICROBLOG_DB__uri"] = "postgresql://postgres:postgres@db:5432/microblog_test"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clean_database():
+    """Clean database between tests"""
+    with Session(engine) as session:
+        # Delete all data from tables
+        session.execute(text('DELETE FROM "post"'))
+        session.execute(text('DELETE FROM "social"'))
+        session.execute(text('DELETE FROM "user"'))
+        session.commit()
+    yield
 
 
 @pytest.fixture(scope="function")
@@ -16,7 +31,6 @@ def api_client():
 
 
 def create_api_client_authenticated(username):
-
     try:
         create_user(f"{username}@microblog.com", username, username)
     except IntegrityError:

@@ -42,9 +42,15 @@ class User(SQLModel, table=True):
 
 class UserResponse(BaseModel):
     """Serializer for User Response"""
+    id: int
     username: str
+    email: str
     avatar: Optional[str] = None
     bio: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
 
 
 class UserRequest(BaseModel):
