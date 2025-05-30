@@ -1,9 +1,9 @@
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import Session, select
 from sqlalchemy import Select
 
-from microblog.auth import AuthenticatedUser
+from microblog.auth import AuthenticatedUser, get_current_user
 from microblog.db import ActiveSession
 from microblog.models.post import (
     Post,
@@ -12,6 +12,7 @@ from microblog.models.post import (
     PostResponseWithReplies,
 )
 from microblog.models.user import User
+from microblog.models.like import Like
 
 router = APIRouter()
 
@@ -72,3 +73,70 @@ async def create_post(
     session.commit()
     session.refresh(db_post)
     return db_post
+
+
+@router.post("/{post_id}/like/", status_code=status.HTTP_201_CREATED)
+def like_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = ActiveSession
+):
+    """Like a post"""
+    # Verifica se o post existe
+    post = session.get(Post, post_id)
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    
+    # Verifica se o usuário já curtiu o post
+    existing_like = session.exec(
+        select(Like).where(
+            Like.user == current_user.id,
+            Like.post == post_id
+        )
+    ).first()
+    
+    if existing_like:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You already liked this post"
+        )
+    
+    # Cria o like
+    like = Like(user=current_user.id, post=post_id)
+    session.add(like)
+    session.commit()
+    session.refresh(like)
+    
+    return {"message": "Post liked successfully"}
+
+
+@router.get("/likes/{username}/", response_model=List[Post])
+def get_user_liked_posts(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = ActiveSession
+):
+    """Get all posts liked by a user"""
+    # Busca o usuário
+    user = session.exec(
+        select(User).where(User.username == username)
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Busca todos os posts curtidos pelo usuário
+    liked_posts = session.exec(
+        select(Post)
+        .join(Like)
+        .where(Like.user == user.id)
+        .order_by(Post.date.desc())
+    ).all()
+    
+    return liked_posts
