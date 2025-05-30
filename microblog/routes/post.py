@@ -93,8 +93,8 @@ def like_post(
     # Verifica se o usuário já curtiu o post
     existing_like = session.exec(
         select(Like).where(
-            Like.user == current_user.id,
-            Like.post == post_id
+            Like.user_id == current_user.id,
+            Like.post_id == post_id
         )
     ).first()
     
@@ -105,7 +105,7 @@ def like_post(
         )
     
     # Cria o like
-    like = Like(user=current_user.id, post=post_id)
+    like = Like(user_id=current_user.id, post_id=post_id)
     session.add(like)
     session.commit()
     session.refresh(like)
@@ -135,7 +135,7 @@ def get_user_liked_posts(
     liked_posts = session.exec(
         select(Post)
         .join(Like)
-        .where(Like.user == user.id)
+        .where(Like.user_id == user.id)
         .order_by(Post.date.desc())
     ).all()
     
