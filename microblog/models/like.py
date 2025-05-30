@@ -1,27 +1,30 @@
-from typing import Optional, TYPE_CHECKING
-from datetime import datetime, timezone
-from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from datetime import datetime
+from pydantic import BaseModel, Field
+from beanie import Document, Link
 
-if TYPE_CHECKING:
-    from microblog.models.user import User
-    from microblog.models.post import Post
+from microblog.models.user import User
+from microblog.models.post import Post
 
-class Like(SQLModel, table=True):
-    """Modelo que representa o like de um usuário em um post"""
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(
-        sa_column=Column("user", Integer, ForeignKey("user.id"))
-    )
-    post_id: int = Field(
-        sa_column=Column("post", Integer, ForeignKey("post.id"))
-    )
-    date: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime, name="date")
-    )
-    
-    # Relacionamentos
-    user: "User" = Relationship(back_populates="likes")
-    post: "Post" = Relationship(back_populates="likes") 
+class Like(Document):
+    """Like model"""
+    user: Link[User]
+    post: Link[Post]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "likes"
+        use_state_management = True
+        indexes = [
+            [("user", 1), ("post", 1)]  # Evita likes duplicados
+        ]
+
+
+class LikeResponse(BaseModel):
+    id: str
+    user_id: str
+    post_id: str
+    created_at: datetime
+
+
+class LikeCreate(BaseModel):
+    post_id: str

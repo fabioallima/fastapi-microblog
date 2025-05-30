@@ -10,11 +10,11 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
     # via starlette
-bcrypt==4.0.1
+bcrypt==4.3.0
     # via passlib
 cffi==1.17.1
     # via cryptography
-click==8.1.7
+click==8.2.0
     # via
     #   typer
     #   uvicorn
@@ -88,7 +88,7 @@ sqlmodel==0.0.24
     # via -r .\requirements.in
 starlette==0.46.2
     # via fastapi
-typer==0.9.0
+typer==0.15.3
     # via -r .\requirements.in
 typing-extensions==4.13.2
     # via
