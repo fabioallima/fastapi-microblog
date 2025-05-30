@@ -23,9 +23,15 @@ class Social(SQLModel, table=True):
     
     from_user: "User" = Relationship(
         back_populates="following",
-        sa_relationship_kwargs={"foreign_keys": [from_user_id]}
+        sa_relationship_kwargs={
+            "foreign_keys": "[Social.from_user_id]",
+            "primaryjoin": "User.id == Social.from_user_id"
+        }
     )
     to_user: "User" = Relationship(
         back_populates="followers",
-        sa_relationship_kwargs={"foreign_keys": [to_user_id]}
+        sa_relationship_kwargs={
+            "foreign_keys": "[Social.to_user_id]",
+            "primaryjoin": "User.id == Social.to_user_id"
+        }
     ) 

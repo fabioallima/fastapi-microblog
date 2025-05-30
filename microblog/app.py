@@ -9,7 +9,7 @@ app = FastAPI(
 
 @app.get('/')
 async def index():
-    return {"hello": "world"}
+    return {"hello": "world2"}
 
 
 app.include_router(main_router)

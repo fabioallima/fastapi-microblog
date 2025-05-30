@@ -26,11 +26,17 @@ class User(SQLModel, table=True):
     # Relacionamentos para seguir usuários
     following: List["Social"] = Relationship(
         back_populates="from_user",
-        sa_relationship_kwargs={"foreign_keys": ["Social.from_user_id"]}
+        sa_relationship_kwargs={
+            "foreign_keys": "[Social.from_user_id]",
+            "primaryjoin": "User.id == Social.from_user_id"
+        }
     )
     followers: List["Social"] = Relationship(
         back_populates="to_user",
-        sa_relationship_kwargs={"foreign_keys": ["Social.to_user_id"]}
+        sa_relationship_kwargs={
+            "foreign_keys": "[Social.to_user_id]",
+            "primaryjoin": "User.id == Social.to_user_id"
+        }
     )
 
 
