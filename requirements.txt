@@ -105,3 +105,4 @@ uvicorn==0.34.2
     # via -r .\requirements.in
 motor==3.3.2
 beanie==1.25.0
+pydantic-settings==2.2.1
