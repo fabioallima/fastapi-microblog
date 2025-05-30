@@ -1,4 +1,4 @@
-"""Token absed auth"""
+"""Token based auth"""
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional, Union
 
@@ -6,34 +6,23 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from sqlmodel import Session, select
-from sqlalchemy.sql import Select
 
 from microblog.config import settings
-from microblog.db import engine
 from microblog.models.user import User
 from microblog.security import verify_password
 
 SECRET_KEY = settings.security.secret_key
 ALGORITHM = settings.security.algorithm
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
 
-
-class RefreshToken(BaseModel):
-    refresh_token: str
-
-
 class TokenData(BaseModel):
     username: Optional[str] = None
-
 
 def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None
@@ -48,7 +37,6 @@ def create_access_token(
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-
 def create_refresh_token(
     data: dict, expires_delta: Optional[timedelta] = None
 ) -> str:
@@ -62,27 +50,20 @@ def create_refresh_token(
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+async def get_user(username: str) -> Optional[User]:
+    """Get user from database"""
+    return await User.find_one({"username": username})
 
-def authenticate_user(
-    get_user: Callable, username: str, password: str
-) -> Union[User, bool]:
+async def authenticate_user(username: str, password: str) -> Union[User, bool]:
     """Authenticate the user"""
-    user = get_user(username)
+    user = await get_user(username)
     if not user:
         return False
-    if not verify_password(password, user.password):
+    if not verify_password(password, user.password_hash):
         return False
     return user
 
-
-def get_user(username: str) -> Optional[User]:
-    """Get user from database"""
-    query = select(User).where(User.username == username)
-    with Session(engine) as session:
-        return session.scalars(query).first()
-
-
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme), request: Request = None, fresh=False
 ) -> User:
     """Get current user authenticated"""
@@ -108,7 +89,8 @@ def get_current_user(
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user(username=token_data.username)
+
+    user = await get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     if fresh and (not payload["fresh"] and not user.superuser):
@@ -116,18 +98,15 @@ def get_current_user(
 
     return user
 
-
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Wraps the sync get_active_user for sync calls"""
     return current_user
 
-
 AuthenticatedUser = Depends(get_current_active_user)
-
 
 async def validate_token(token: str = Depends(oauth2_scheme)) -> User:
     """Validates user token"""
-    user = get_current_user(token=token)
+    user = await get_current_user(token=token)
     return user
