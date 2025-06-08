@@ -33,7 +33,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    command: mongod --bind_ip_all
+    command: mongod --bind_ip_all --quiet --logpath=/dev/null
 
 networks:
   microblog-network:

@@ -25,27 +25,34 @@ class Post(Document):
         data = super().model_dump(**kwargs)
         logger.debug(f"Original model_dump data: {data}")
         
+        # Convert _id to id
         if "_id" in data:
             data["id"] = str(data.pop("_id"))
         
-        # Handle user reference
+        # Handle user field
         if "user" in data:
-            if isinstance(data["user"], dict) and "_id" in data["user"]:
-                data["user_id"] = str(data["user"]["_id"])
+            if isinstance(data["user"], dict):
+                data["user_id"] = str(data["user"].get("id", data["user"].get("_id")))
+            elif isinstance(data["user"], Link):
+                data["user_id"] = str(data["user"].ref.id)
             elif hasattr(data["user"], "id"):
                 data["user_id"] = str(data["user"].id)
-            elif isinstance(data["user"], User):
-                data["user_id"] = str(data["user"].id)
+            elif hasattr(data["user"], "_id"):
+                data["user_id"] = str(data["user"]._id)
             data.pop("user")
         
-        # Handle parent reference
+        # Handle parent field
         if "parent" in data:
             if data["parent"] is None:
                 data["parent_id"] = None
-            elif isinstance(data["parent"], dict) and "_id" in data["parent"]:
-                data["parent_id"] = str(data["parent"]["_id"])
+            elif isinstance(data["parent"], dict):
+                data["parent_id"] = str(data["parent"].get("id", data["parent"].get("_id")))
+            elif isinstance(data["parent"], Link):
+                data["parent_id"] = str(data["parent"].ref.id)
             elif hasattr(data["parent"], "id"):
                 data["parent_id"] = str(data["parent"].id)
+            elif hasattr(data["parent"], "_id"):
+                data["parent_id"] = str(data["parent"]._id)
             data.pop("parent")
         
         logger.debug(f"Processed model_dump data: {data}")

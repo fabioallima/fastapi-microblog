@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from beanie import PydanticObjectId
+from beanie import PydanticObjectId, Link
 
 from microblog.models.post import (
     Post,
@@ -18,7 +18,12 @@ router = APIRouter()
 
 @router.get("/", response_model=List[PostResponse])
 async def list_posts():
-    return await Post.find(Post.parent == None).to_list()
+    posts = await Post.find(Post.parent == None).to_list()
+    # Ensure user field is loaded
+    for post in posts:
+        if isinstance(post.user, Link):
+            await post.user.fetch()
+    return [PostResponse.model_validate(post.model_dump()) for post in posts]
 
 
 @router.get("/{post_id}/", response_model=PostResponseWithReplies)
@@ -26,7 +31,7 @@ async def get_post_by_post_id(post_id: str):
     post = await Post.get(PydanticObjectId(post_id))
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    response = PostResponseWithReplies.model_validate(post)
+    response = PostResponseWithReplies.model_validate(post.model_dump())
     return await response.get_replies()
 
 
@@ -43,7 +48,7 @@ async def get_posts_by_username(username: str, include_replies: bool = False):
             (Post.user.id == user.id) & (Post.parent == None)
         ).to_list()
 
-    return posts
+    return [PostResponse.model_validate(post.model_dump()) for post in posts]
 
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
