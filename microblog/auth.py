@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional, Union
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from microblog.config import settings
 from microblog.models.user import User
-from microblog.security import verify_password
+from microblog.security import verify_password, get_password_hash
 
 SECRET_KEY = settings.security.secret_key
 ALGORITHM = settings.security.algorithm
@@ -59,21 +59,18 @@ def create_refresh_token(
     return encoded_jwt
 
 
-def authenticate_user(
-    get_user: Callable, username: str, password: str
-) -> Union[User, bool]:
-    """Authenticate the user"""
-    user = get_user(username)
+async def get_user(username: str) -> Optional[User]:
+    """Get user from database"""
+    return await User.find_one(User.username == username)
+
+
+async def authenticate_user(get_user_func, username: str, password: str):
+    user = await get_user_func(username)
     if not user:
         return False
     if not verify_password(password, user.password_hash):
         return False
     return user
-
-
-async def get_user(username: str) -> Optional[User]:
-    """Get user from database"""
-    return await User.find_one({"username": username})
 
 
 async def get_current_user(
@@ -116,6 +113,8 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Wraps the sync get_active_user for sync calls"""
+    if not current_user:
+        raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
