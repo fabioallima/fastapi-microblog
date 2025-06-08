@@ -6,17 +6,13 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from sqlmodel import Session, select
-from sqlalchemy.sql import Select
 
 from microblog.config import settings
-from microblog.db import engine
 from microblog.models.user import User
 from microblog.security import verify_password
 
 SECRET_KEY = settings.security.secret_key
 ALGORITHM = settings.security.algorithm
-
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -70,19 +66,17 @@ def authenticate_user(
     user = get_user(username)
     if not user:
         return False
-    if not verify_password(password, user.password):
+    if not verify_password(password, user.password_hash):
         return False
     return user
 
 
-def get_user(username: str) -> Optional[User]:
+async def get_user(username: str) -> Optional[User]:
     """Get user from database"""
-    query = select(User).where(User.username == username)
-    with Session(engine) as session:
-        return session.scalars(query).first()
+    return await User.find_one({"username": username})
 
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme), request: Request = None, fresh=False
 ) -> User:
     """Get current user authenticated"""
@@ -108,10 +102,11 @@ def get_current_user(
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user(username=token_data.username)
+    
+    user = await get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
-    if fresh and (not payload["fresh"] and not user.superuser):
+    if fresh and (not payload.get("fresh", False) and not getattr(user, "superuser", False)):
         raise credentials_exception
 
     return user
@@ -129,5 +124,5 @@ AuthenticatedUser = Depends(get_current_active_user)
 
 async def validate_token(token: str = Depends(oauth2_scheme)) -> User:
     """Validates user token"""
-    user = get_current_user(token=token)
+    user = await get_current_user(token=token)
     return user

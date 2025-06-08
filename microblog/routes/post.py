@@ -11,10 +11,9 @@ from microblog.models.post import (
 )
 from microblog.models.user import User
 from microblog.models.like import Like
-from microblog.security import get_current_user
-from microblog.auth import AuthenticatedUser
+from microblog.auth import get_current_user, AuthenticatedUser
 
-router = APIRouter(prefix="/posts", tags=["posts"])
+router = APIRouter()
 
 
 @router.get("/", response_model=List[PostResponse])
@@ -27,7 +26,8 @@ async def get_post_by_post_id(post_id: str):
     post = await Post.get(PydanticObjectId(post_id))
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    response = PostResponseWithReplies.model_validate(post)
+    return await response.get_replies()
 
 
 @router.get("/user/{username}/", response_model=List[PostResponse])
@@ -95,16 +95,4 @@ async def get_user_liked_posts(username: str):
     likes = await Like.find(Like.user_id == user.id).to_list()
     post_ids = [like.post_id for like in likes]
     posts = await Post.find(Post.id.in_(post_ids)).sort("-date").to_list()
-    return posts
-
-@router.get("/user/{user_id}", response_model=List[PostResponse])
-async def read_user_posts(user_id: str):
-    """Get all posts from a user"""
-    user = await User.get(PydanticObjectId(user_id))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    posts = await Post.find({"user.id": user.id}).to_list()
     return posts

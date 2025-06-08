@@ -6,7 +6,6 @@ from microblog.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
 SECRET_KEY = settings.security.secret_key
 ALGORITHM = settings.security.algorithm
 

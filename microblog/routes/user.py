@@ -5,10 +5,10 @@ from beanie import PydanticObjectId
 from microblog.models.user import User, UserCreate, UserUpdate, UserResponse
 from microblog.models.social import Social
 from microblog.models.post import TimelineResponse, Post, PostResponse
-from microblog.security import get_current_user, get_password_hash
-from microblog.auth import AuthenticatedUser
+from microblog.security import get_password_hash
+from microblog.auth import get_current_user, AuthenticatedUser
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter()
 
 
 @router.get("/", response_model=List[UserResponse])
@@ -46,19 +46,6 @@ async def create_user(user: UserCreate):
     )
     await db_user.insert()
     return db_user
-
-
-@router.get("/id/{user_id}", response_model=UserResponse)
-async def read_user(user_id: str):
-    """Get a user by ID"""
-    user = await User.get(PydanticObjectId(user_id))
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return user
-
 
 
 @router.post("/follow/{user_id}", status_code=201)
