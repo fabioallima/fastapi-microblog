@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from beanie import Document, Link
 
@@ -25,6 +25,17 @@ class PostResponse(BaseModel):
     parent_id: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+
+class PostResponseWithReplies(PostResponse):
+    """Post response that includes replies"""
+    replies: List[PostResponse] = []
+
+    async def get_replies(self):
+        """Get all replies for this post"""
+        replies = await Post.find(Post.parent.id == self.id).to_list()
+        self.replies = [PostResponse.model_validate(reply) for reply in replies]
+        return self
 
 
 class PostCreate(BaseModel):
