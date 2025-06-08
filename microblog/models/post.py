@@ -2,8 +2,12 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
 from beanie import Document, Link
+from bson import ObjectId
+import logging
 
 from microblog.models.user import User
+
+logger = logging.getLogger(__name__)
 
 class Post(Document):
     """Post model"""
@@ -16,6 +20,36 @@ class Post(Document):
     class Settings:
         name = "posts"
         use_state_management = True
+
+    def model_dump(self, **kwargs):
+        data = super().model_dump(**kwargs)
+        logger.debug(f"Original model_dump data: {data}")
+        
+        if "_id" in data:
+            data["id"] = str(data.pop("_id"))
+        
+        # Handle user reference
+        if "user" in data:
+            if isinstance(data["user"], dict) and "_id" in data["user"]:
+                data["user_id"] = str(data["user"]["_id"])
+            elif hasattr(data["user"], "id"):
+                data["user_id"] = str(data["user"].id)
+            elif isinstance(data["user"], User):
+                data["user_id"] = str(data["user"].id)
+            data.pop("user")
+        
+        # Handle parent reference
+        if "parent" in data:
+            if data["parent"] is None:
+                data["parent_id"] = None
+            elif isinstance(data["parent"], dict) and "_id" in data["parent"]:
+                data["parent_id"] = str(data["parent"]["_id"])
+            elif hasattr(data["parent"], "id"):
+                data["parent_id"] = str(data["parent"].id)
+            data.pop("parent")
+        
+        logger.debug(f"Processed model_dump data: {data}")
+        return data
 
 
 class PostResponse(BaseModel):

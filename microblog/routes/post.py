@@ -66,7 +66,13 @@ async def create_post(
         parent=parent if post.parent_id else None,
     )
     await db_post.insert()
-    return db_post
+    
+    # Convert to dict and ensure user_id is present
+    post_dict = db_post.model_dump()
+    if "user_id" not in post_dict and hasattr(current_user, "id"):
+        post_dict["user_id"] = str(current_user.id)
+    
+    return PostResponse.model_validate(post_dict)
 
 
 @router.post("/{post_id}/like/", status_code=status.HTTP_201_CREATED)
