@@ -2,6 +2,7 @@ from typing import Optional
 from datetime import datetime
 from pydantic import EmailStr, BaseModel, Field
 from beanie import Document
+from bson import ObjectId
 
 class User(Document):
     """User model"""
@@ -15,6 +16,12 @@ class User(Document):
     class Settings:
         name = "users"
         use_state_management = True
+
+    def model_dump(self, **kwargs):
+        data = super().model_dump(**kwargs)
+        if "_id" in data:
+            data["id"] = str(data.pop("_id"))
+        return data
 
 
 class UserResponse(BaseModel):
