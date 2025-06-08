@@ -1,0 +1,20 @@
+[default]
+dynaconf_merge = true
+
+[default.MICROBLOG_DB]
+uri = "mongodb://db:27017/microblog"
+
+[development]
+dynaconf_merge = true
+
+[development.MICROBLOG_DB]
+uri = "mongodb://db:27017/microblog"
+
+[testing]
+dynaconf_merge = true
+
+[testing.MICROBLOG_DB]
+uri = "mongodb://db:27017/microblog_test"
+
+
+

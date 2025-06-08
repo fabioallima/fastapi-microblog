@@ -8,19 +8,37 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MICROBLOG_DB__uri=mongodb://mongodb:27017/microblog
+      - MICROBLOG_DB__uri=mongodb://db:27017/microblog
     volumes:
       - .:/home/app/api
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - microblog-network
     stdin_open: true
     tty: true
   db:
+    container_name: microblog-mongodb
     image: mongo:latest
     ports:
-        - "27017:27017"
+      - "27017:27017"
     volumes:
-        - mongodb_data:/data/db
+      - mongodb_data:/data/db
+    networks:
+      - microblog-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: mongod --bind_ip_all
+
+networks:
+  microblog-network:
+    name: microblog-network
+    driver: bridge
 
 volumes:
   mongodb_data:
